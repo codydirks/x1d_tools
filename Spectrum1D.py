@@ -51,7 +51,6 @@ class Spectrum1D(object):
         """
         Converts the current wavelength array to velocity space centered on the given wavelength.
         """
-        print type(cen_wav)
         if hasattr(cen_wav, '__len__'):# Checks that cen_wav is a single value
             print "Central Wavelength can't be a list!"
             return None
