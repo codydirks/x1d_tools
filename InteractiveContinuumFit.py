@@ -116,7 +116,6 @@ class InteractiveContinuumFit(object):
         self.UpdatePlots()
         Tk.mainloop()
 
-
     def configure(self,event):
         self.inc_fit_button.place(relx=0.12,y=self.degree_readout_box.winfo_y(),anchor='s')
         self.dec_fit_button.place(relx=0.12,y=self.degree_readout_box.winfo_y()+int(self.degree_readout_box.winfo_height()),anchor='n')

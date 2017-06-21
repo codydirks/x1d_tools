@@ -36,8 +36,8 @@ class X1D(object):
         spec_idx=[]
         spec_count=0
         if hasattr(w, '__len__')==False:
-            if w < min(self.spectra[-1].wav_arr) or w > max(self.spectra[0].wav_arr):
-                print self.hdr['ROOTNAME']+': '+'Wavelength must be between', round(min(self.spectra[-1].wav_arr),1), 'and', round(max(self.spectra[0].wav_arr),1)
+            if w < float(self.hdr['minwave']) or w > float(self.hdr['maxwave']):
+                print self.hdr['ROOTNAME']+': '+'Wavelength must be between', self.hdr['minwave'], 'and', self.hdr['maxwave']
                 return None
             for spectrum in self.spectra:
                 if spectrum.wav_arr[0] < w and spectrum.wav_arr[-1] > w:
