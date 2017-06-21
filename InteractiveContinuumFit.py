@@ -90,9 +90,9 @@ class InteractiveContinuumFit(object):
         self.is_pressed=False
         self.is_drawing_new_rect=False
         self.x0 = None
-        self.y0 = self.ax.get_ylim()[0]
         self.x1 = None
-        self.y1 = self.ax.get_ylim()[1]
+        self.y0,self.y1=self.ax.get_ylim()
+
         self.lines=[]
         self.ax.add_patch(self.rect)
 
@@ -199,7 +199,7 @@ class InteractiveContinuumFit(object):
         #self.ax.plot(self.xdata,self.spec1d_object.flux_err_arr, color='0.5', linestyle='-', linewidth=1)
         self.ax.set_ylabel('Flux')
         self.ax.set_xlabel('Velocity')
-        self.ax.set_xlim([self.xdata[0],self.xdata[-1]])
+        self.ax.set_xlim(self.xdata[0]-20,self.xdata[-1]+20)
         self.ax.set_ylim([-0.1*np.mean(self.ydata),2.5*np.mean(self.ydata)])
         self.y0, self.y1 = self.ax.get_ylim()
         self.ax.figure.canvas.draw()
