@@ -1,6 +1,8 @@
 import numpy as np
 from astropy.io import fits
 from x1d_tools import Spectrum1D
+from copy import copy, deepcopy
+from scipy.interpolate import interp1d
 
 class X1D(object):
     """
@@ -23,7 +25,40 @@ class X1D(object):
         hdr.append(card=('SPECRES',self.hdr['SPECRES']))
         hdr.append(card=('TARGNAME',self.hdr['TARGNAME']))
         hdr.append(card=('FILENAME',self.hdr['ROOTNAME']))
-        self.spectra = [Spectrum1D(spectrum, hdr) for spectrum in hdulist[1].data]
+        #self.spectra = [Spectrum1D(spectrum, hdr) for spectrum in hdulist[1].data]
+        if len(hdulist)==2:
+            self.spectra = [Spectrum1D(spectrum, hdr) for spectrum in hdulist[1].data]
+        else:
+            # If multiple data exposures, need to co-add individual exposures
+            spec_list=[]
+            exposures = hdulist[1:]
+            total_exp_time=sum([e.header['exptime'] for e in exposures])
+            for spec_idx in range(len(exposures[0].data)):
+                temp_spec=Spectrum1D(exposures[0].data[spec_idx],hdr)
+                base_grid=deepcopy(exposures[0].data[spec_idx][2])
+                summed_flux=np.zeros(len(base_grid),dtype=float)
+                errs=np.zeros(len(base_grid),dtype=float)
+                for exp in exposures:
+                    weight=float(exp.header['exptime'])/total_exp_time
+                    idxs=np.where(np.logical_and(base_grid>=exp.data[spec_idx][2][0],base_grid<=exp.data[spec_idx][2][-1]))[0]
+                    base_grid=base_grid[idxs]
+                    summed_flux=summed_flux[idxs]
+                    errs=errs[idxs]
+                    f=interp1d(exp.data[spec_idx][2],exp.data[spec_idx][6],kind='cubic')
+                    ferr=interp1d(exp.data[spec_idx][2],exp.data[spec_idx][7],kind='cubic')
+                    new_flux=f(base_grid)
+                    new_errs=ferr(base_grid)
+                    for elem in range(len(base_grid)):
+                        summed_flux[elem] += weight*new_flux[elem]
+                        errs[elem] += 1./(new_errs[elem]**2)
+
+                temp_spec.wav_arr=base_grid
+                temp_spec.flux_arr=summed_flux
+                temp_spec.flux_err_arr=1./np.sqrt(errs)
+                temp_spec.nelem=len(base_grid)
+                temp_spec.hdr['exptime']=total_exp_time
+                spec_list.append(temp_spec)
+            self.spectra = spec_list
 
     def __repr__(self):
         return self.hdr['filename']

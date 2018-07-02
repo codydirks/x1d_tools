@@ -33,6 +33,7 @@ class InteractiveContinuumFit(object):
         self.specs_to_sum=[]
         self.xdata=spec1d_object.vel_arr
         self.ydata=spec1d_object.flux_arr
+        self.yerrs=spec1d_object.flux_err_arr
         self.cen_wav=self.spec1d_object.wav_arr[0]/(1.0+(self.spec1d_object.vel_arr[0]/300000.))
         self.mask=np.array([1]*len(self.xdata))
         self.rms_error=0
@@ -184,6 +185,7 @@ class InteractiveContinuumFit(object):
         self.fit_continuum(self.degree_of_fit)
         self.get_rms_error()
         self.norm_flux=np.divide(self.ydata,self.cont_fit)
+        self.norm_flux_err=np.divide(self.yerrs,self.cont_fit)
 
         self.ax.cla()
         self.ax.autoscale(enable=True, axis='y')
@@ -221,7 +223,9 @@ class InteractiveContinuumFit(object):
     	filename=self.spec1d_object.hdr['TARGNAME']+'_'+wav+'.dat'
     	with open(filename, 'w') as myfile:
     	    for i in range(len(self.spec1d_object.wav_arr)):
-    	        myfile.write(str(self.spec1d_object.wav_arr[i])+'\t'+str(self.norm_flux[i])+'\n')
+    	        myfile.write(str(self.spec1d_object.wav_arr[i])+'\t'
+                                +str(self.norm_flux[i])+'\t'
+                                +str(self.norm_flux_err[i])+'\n')
 
     def output_fits_clicked(self):
     	pass
@@ -308,23 +312,30 @@ class InteractiveContinuumFit(object):
         total_exp_time=sum([float(a.hdr['EXPTIME']) for a in self.specs_to_sum])
         base_grid=self.specs_to_sum[0].wav_arr
         summed_flux=np.zeros(len(base_grid),dtype=float)
+        errs=np.zeros(len(base_grid),dtype=float)
         for spec in self.specs_to_sum:
             weight=float(spec.hdr['EXPTIME'])/total_exp_time
             # Interpolate new flux
             idxs=np.where(np.logical_and(base_grid>=spec.wav_arr[0],base_grid<=spec.wav_arr[-1]))[0]
             base_grid=base_grid[idxs]
             summed_flux=summed_flux[idxs]
+            errs=errs[idxs]
             f=interp1d(spec.wav_arr,spec.flux_arr,kind='cubic')
+            ferr=interp1d(spec.wav_arr,spec.flux_err_arr,kind='cubic')
             new_flux=f(base_grid)
+            new_errs=ferr(base_grid)
             for i in range(len(base_grid)):
                 summed_flux[i]+=weight*new_flux[i]
+                errs[i]+=1./(new_errs[i]**2)
 
         # Store results
         self.spec1d_object.wav_arr=base_grid
         self.spec1d_object.flux_arr=summed_flux
+        self.spec1d_object.flux_err_arr=1./np.sqrt(errs)
         self.spec1d_object=self.spec1d_object.conv_wav_to_vel(self.cen_wav).get_vel_range(self.cen_wav,low_lim,up_lim)
         self.xdata=self.spec1d_object.vel_arr
         self.ydata=self.spec1d_object.flux_arr
+        self.yerrs=self.spec1d_object.flux_err_arr
 
         # Reset mask and rect drawings
         self.mask=np.array([1]*len(self.xdata))
